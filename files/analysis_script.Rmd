@@ -1,0 +1,680 @@
+---
+title: "CALCOFI- Report"
+author: "Afsana Mimi"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Summary: 
+This report presents a stepwise analysis of the CalCOFI Cast and Bottle dataset to understand and predict ocean temperature in the California Current System. The purpose of the analysis is to build and test a statistical model that predicts ocean temperature from measurements collected from the same water samples —especially salinity, dissolved oxygen, ammonia, and nutrients—across many stations and depths, using all other variables.
+
+# Data Import and Cleaning
+
+## 1: Call Packages
+
+```{r packages}
+library(tidyverse)
+library(janitor)
+library(stringi)
+library(rsample)
+library(yardstick)
+library(broom)
+library(ppcor)
+library(car)
+library(glmnet)
+library(Matrix)
+library(knitr)
+library(readxl)
+library(dplyr)
+library(stringr)
+library(readr)
+#install.packages("ggcorrplot")
+library(ggcorrplot)
+
+```
+
+## 2. PATH SETUP
+
+```{r path}
+# Get the data
+data_file <- "C:/Users/afsan/OneDrive/Desktop/Thesis/MERGED_CalCOFI_DATA_CAST_BOTTLE.csv"
+
+```
+
+Since having issue while reading the file, i want to dive dive more to the file, Checking the file name.
+
+
+I have found out r is reading data not as an example Bottle-pH2, however as it is calling as `Bottle-pH2`.
+```{r}
+
+df_raw <- readr::read_csv(
+  data_file,
+  col_types = readr::cols(.default = readr::col_character()),
+  locale = readr::locale(encoding = "Latin1"),
+  show_col_types = FALSE
+)
+
+head(df_raw)
+
+```
+```{r}
+# Fix encoding BEFORE cleaning names
+names(df_raw) <- stringi::stri_enc_toutf8(names(df_raw))
+names(df_raw)
+
+```
+```{r}
+# Clean names to snake_case
+df_raw <- janitor::clean_names(df_raw)
+
+names(df_raw)
+```
+Read CalCofi DataSets CodeBook Data
+```{r}
+df_excel <- read_excel("C:/Users/afsan/OneDrive/Desktop/Thesis/CalCofi DataSets CodeBook.xlsx", sheet = "Sheet1")
+head(df_excel)
+```
+```{r}
+#Check the names
+names(df_excel)
+```
+```{r}
+#Extract Quality Code Field Names
+quality_cols <- df_excel %>%
+  filter(str_detect(Description, "Quality Code")) %>%
+  pull(`Cast\\Bottle Fields`) %>%
+  gsub("^\\[|\\]$", "", .) %>%      # remove brackets
+  janitor::make_clean_names()       # match df_raw cleaned names
+
+quality_cols
+```
+
+
+```{r}
+#Keep Only Rows Where "Quality Code" is Blank OR 4 OR 6 OR 9
+df_filtered <- df_raw %>%
+  filter(
+    if_all(
+      all_of(quality_cols),
+      ~ is.na(.x) | .x %in% c(4, 6, 9)))
+
+nrow(df_filtered)
+nrow(df_raw)
+```
+
+```{r}
+#Check only quality columns (to confirm filter worked)
+df_filtered %>%
+  dplyr::select(all_of(quality_cols)) %>%
+  head(20)
+
+```
+```{r}
+#Remove Quality Columns
+df_final <- df_filtered %>%
+  dplyr::select(-dplyr::all_of(quality_cols))
+
+nrow(df_final)
+head(df_final)
+```
+
+```{r}
+names(df_final)
+```
+
+```{r}
+# Get rid of temperature-related quality fields
+df_final <- df_final %>%
+  dplyr::select(
+    -bottle_rec_ind,
+    -bottle_t_prec
+  )
+
+# Confirm they are gone
+c("bottle_rec_ind", "bottle_t_prec") %in% names(df_final)
+
+```
+# Predictive Analysis Process
+```{r}
+response <- "bottle_t_deg_c"
+response
+```
+# Train Data
+```{r}
+sp <- group_initial_split(df_final, group = cast_sta_id, prop = 0.8)
+
+sp
+```
+
+```{r}
+train <- training(sp)
+
+head(train)
+
+```
+
+```{r}
+test  <- testing(sp)
+head(test)
+```
+```{r}
+# Keep Numeric Variables Only
+train_num <- train %>%
+  mutate(across(everything(),
+                ~ suppressWarnings(as.numeric(.x))))
+head(train_num)
+
+```
+
+```{r}
+test_num <- test %>%
+  mutate(across(everything(),
+                ~ suppressWarnings(as.numeric(.x))))
+head(test_num)
+```
+
+```{r}
+train_num_d <- train_num %>% dplyr::select(where(is.numeric))
+nrow(train_num)
+nrow(train_num_d)
+```
+```{r}
+test_num_d <- test_num %>% dplyr::select(where(is.numeric))
+nrow(test_num)
+nrow(test_num_d)
+```
+
+
+```{r}
+dim(train_num_d)
+summary(train_num_d$bottle_t_deg_c)
+```
+
+```{r}
+sum(complete.cases(train_num_d))
+```
+Remove Very Sparse Columns
+
+```{r}
+#Calculate the missing data rate
+
+missing_rate <- colMeans(is.na(train_num_d))
+
+head(missing_rate)
+```
+```{r}
+#Keep Columns With <80% Missing
+good_cols <- names(missing_rate[missing_rate < 0.8])
+
+train_filtered <- train_num_d[, good_cols]
+test_filtered  <- test_num_d[, good_cols]
+
+dim(train_filtered)
+```
+```{r}
+# Remove Rows With Missing Values
+train_clean <- train_filtered[complete.cases(train_filtered), ]
+test_clean  <- test_filtered[complete.cases(test_filtered), ]
+
+nrow(train_clean)
+nrow(test_clean)
+```
+# Correlation Analysis
+```{r}
+numeric_vars <- train_clean %>%
+  dplyr::select(where(is.numeric))
+
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+
+#  Save Full Correlation Matrix
+write.csv(
+  cor_matrix,
+  "calcofi_full_correlation_matrix.csv",
+  row.names = TRUE
+)
+
+# Extract correlations with temperature
+temp_cor <- cor_matrix["bottle_t_deg_c", ]
+
+# Convert to tidy table
+cor_table <- tibble(
+  variable = names(temp_cor),
+  correlation_with_temperature = round(as.numeric(temp_cor), 3)
+) %>%
+  arrange(desc(abs(correlation_with_temperature)))
+
+# Save Temperature Correlation Table
+
+write.csv(
+  cor_table,
+  "calcofi_temperature_correlations.csv",
+  row.names = FALSE
+)
+
+cor_table
+```
+```{r}
+getwd()
+```
+
+```{r}
+#Select Only Strong Predictors
+
+selected_vars <- c(
+  "bottle_depthm",
+  "bottle_salnty",
+  "bottle_po4u_m",
+  "bottle_no3u_m",
+  "bottle_si_o3u_m",
+  "bottle_o2sat"
+)
+
+train_selected <- train_clean[, c(response, selected_vars)]
+test_selected  <- test_clean[, c(response, selected_vars)]
+```
+
+```{r}
+#Remove Missing Rows
+
+train_selected <- na.omit(train_selected)
+test_selected  <- na.omit(test_selected)
+```
+
+
+
+```{r}
+#Linear Regression
+m_lm <- lm(bottle_t_deg_c ~ ., data = train_selected)
+
+#pred_lm <- predict(m_lm, newdata = test_selected)
+
+summary(m_lm)
+```
+
+```{r}
+# Generate a correlation matrix for your predictors
+cor_matrix <- cor(train_selected[, selected_vars])
+
+# Save it as a CSV file
+write.csv(cor_matrix, "correlation_matrix.csv")
+
+round(cor_matrix, 2) # Rounding to 2 decimals 
+```
+```{r}
+# Define your website folder path
+website_folder <- "C:/Users/afsan/OneDrive/Desktop/Thesis/calcofi_dashboards/"
+
+```
+
+
+```{r}
+# Create the heatmap
+ggcorrplot(cor_matrix, 
+           hc.order = TRUE,         # Groups similar variables together
+           type = "lower",          # Shows only the bottom half
+           lab = TRUE,              # Adds the actual numbers to the squares
+           lab_size = 3,            # Size of the numbers
+           colors = c("#E46726", "white", "#6D9EC1"), # Red for negative, Blue for positive
+           title = "Correlation Heatmap of Ocean Predictors",
+           ggtheme = theme_minimal())
+
+ggsave(paste0(website_folder, "img-5.jpeg"), width = 8, height = 6, dpi = 300)
+```
+
+
+```{r}
+#Ridge Regression
+#  Prepare the data (X = predictors, y = target variable, temperature)
+x <- as.matrix(train_selected[, selected_vars])
+y <- train_selected$bottle_t_deg_c 
+
+# 2. Find the best penalty value (lambda) using cross-validation
+cv_model <- cv.glmnet(x, y, alpha = 0) # alpha=0 means Ridge
+best_lambda <- cv_model$lambda.min
+
+# 3. Fit the final Ridge model
+ridge_model <- glmnet(x, y, alpha = 0, lambda = best_lambda)
+
+# 4. See which ocean variables are most important after shrinkage
+coef(ridge_model)
+
+
+```
+```{r}
+# Linear Regression Prediction
+# Using the test data model
+pred_lm <- predict(m_lm, newdata = test_selected)
+
+# Ridge Regression Prediction
+# Ridge needs the data as a matrix
+x_test <- as.matrix(test_selected[, selected_vars])
+pred_ridge <- as.numeric(predict(ridge_model, newx = x_test, s = best_lambda))
+
+# The Comparison 
+results_comparison <- data.frame(
+  Actual = test_selected$bottle_t_deg_c,
+  Linear_Error = abs(test_selected$bottle_t_deg_c - pred_lm),
+  Ridge_Error  = abs(test_selected$bottle_t_deg_c - pred_ridge)
+)
+
+# Calculate Average Error (MAE)
+# If Ridge_MAE is lower, Ridge is officially better!
+summary_metrics <- results_comparison %>%
+  summarise(
+    Linear_MAE = mean(Linear_Error),
+    Ridge_MAE  = mean(Ridge_Error)
+  )
+
+print(summary_metrics)
+
+```
+
+
+
+
+```{r}
+# 1. Get the model's predictions the data
+predictions <- predict(ridge_model, s = best_lambda, newx = x)
+
+# 2. Calculate the Sum of Squares (The math for R-squared)
+actual <- y
+rss <- sum((predictions - actual)^2)  # Residual Sum of Squares
+tss <- sum((actual - mean(actual))^2) # Total Sum of Squares
+
+# 3. The Final R-squared
+r_squared <- 1 - (rss / tss)
+print(paste("The R-squared value is:", round(r_squared, 4)))
+
+```
+
+```{r}
+# Prepare the data
+plot_lm_final <- data.frame(
+  Actual = test_selected$bottle_t_deg_c,
+  Predicted = as.numeric(pred_lm)
+)
+
+# Create the Plot
+ggplot(plot_lm_final, aes(x = Actual, y = Predicted)) +
+  # Points
+  geom_point(alpha = 0.3, color = "#6D9EC1", size = 1.2) +
+  
+  # The 1:1 Identity Line
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red", size = 1) +
+  
+  # This allows the plot to stretch and fill the RStudio window
+  scale_x_continuous(limits = c(5, 25)) +
+  scale_y_continuous(limits = c(5, 25)) +
+  
+  # Better label placement (Top-Left)
+  annotate("text", x = 5.5, y = 24, label = "Identity Line (1:1)", 
+           color = "red", fontface = "italic", size = 4, hjust = 0) +
+  
+  #  Wrap title so it doesn't cut off
+  labs(
+    title = "Linear Regression Analysis:\nActual vs. Predicted Temperature",
+    subtitle = "Model Accuracy (Adjusted R\u00B2): 0.8562",
+    x = "Actual Temperature (\u00B0C)",
+    y = "Predicted Temperature (\u00B0C)"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, lineheight = 1.2),
+    plot.subtitle = element_text(size = 12, color = "darkgray"),
+    axis.title = element_text(size = 11)
+  )
+
+ggsave(paste0(website_folder, "img-6.jpeg"), width = 8, height = 6, dpi = 300)
+
+```
+
+
+```{r}
+
+# 1. Ensure we use the cleaned data (removing those 100°C errors)
+ocean_data_filtered <- train %>%
+  mutate(
+    temp = as.numeric(bottle_t_deg_c),
+    depth = as.numeric(bottle_depthm)
+  ) %>%
+  filter(temp < 35, !is.na(temp), !is.na(depth))
+
+# 2. Plot Depth vs. Temperature with a Linear Regression line
+ggplot(ocean_data_filtered, aes(x = depth, y = temp)) +
+  # Add the raw data points (using alpha to handle the thousands of dots)
+  geom_point(alpha = 0.2, color = "steelblue", size = 1) +
+  # Add the Linear Regression Line in Red
+  geom_smooth(method = "lm", color = "red", size = 1.2) + 
+  labs(title = "Linear Regression: How Temperature Changes with Depth",
+       subtitle = "The red line shows the predicted decrease in temperature",
+       x = "Depth (m)", 
+       y = "Temperature") +
+  theme_minimal()
+
+ggsave(paste0(website_folder, "img-7.jpeg"), width = 8, height = 6, dpi = 300)
+
+```
+
+```{r}
+# 1. Prepare the data with a "Depth sizes"
+ocean_data_faceted <- train %>%
+  mutate(
+    temp = as.numeric(bottle_t_deg_c),
+    sal = as.numeric(bottle_salnty),
+    depth = as.numeric(bottle_depthm),
+    # Create a category to split the data at 200 meters
+    depth_group = ifelse(depth <= 200, "Shallow Water (0-200m)", "Deep Water (>200m)")
+  ) %>%
+  # Filter out errors and missing values
+  filter(temp < 35, !is.na(temp), !is.na(sal), !is.na(depth_group))
+
+# 2. Create the Faceted Plot
+ggplot(ocean_data_faceted, aes(x = temp, y = sal, color = depth)) +
+  geom_point(alpha = 0.2, size = 0.8) +
+  # Add a trend line to EACH panel
+  geom_smooth(method = "lm", color = "red", se = FALSE) + 
+  # This line creates the two side-by-side windows
+  facet_wrap(~ depth_group, scales = "free_x") + 
+  scale_color_viridis_c(direction = -1, name = "Depth (m)") +
+  labs(title = "Temperature vs. Salinity by Depth Layer",
+       subtitle = "Does the relationship flip in deep water?",
+       x = "Temperature", 
+       y = "Salinity (psu)") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold", size = 12)) # Make panel titles bold
+
+ggsave(paste0(website_folder, "img-8.jpeg"), width = 10, height = 5, dpi = 300)
+
+```
+
+#Categorical Analysis
+
+
+```{r}
+# 1. Prepare the categorical data
+depth_summary <- train %>%
+  mutate(
+    temp = as.numeric(bottle_t_deg_c),
+    depth_group = ifelse(as.numeric(bottle_depthm) <= 200, "Shallow (0-200m)", "Deep (>200m)")
+  ) %>%
+  filter(!is.na(temp), !is.na(depth_group), temp < 40) %>%
+  group_by(depth_group) %>%
+  summarise(
+    mean_temp = mean(temp),
+    se = sd(temp) / sqrt(n()) # Standard Error for the bars
+  )
+
+# 2. Create the Bar Chart
+ggplot(depth_summary, aes(x = depth_group, y = mean_temp, fill = depth_group)) +
+  geom_bar(stat = "identity", color = "black", width = 0.6) +
+  geom_errorbar(aes(ymin = mean_temp - se, ymax = mean_temp + se), width = 0.2) +
+  scale_fill_manual(values = c("Deep (>200m)" = "#2c7fb8", "Shallow (0-200m)" = "#fec44f")) +
+  labs(title = "Categorical Analysis: Average Temperature by Depth Layer",
+       subtitle = "Comparing the sun-lit surface to the dark deep ocean",
+       x = "Depth Category", 
+       y = "Average Temperature (C)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave(paste0(website_folder, "img-9.jpeg"), width = 7, height = 5, dpi = 300)
+
+```
+
+
+Anova
+
+```{r}
+# 1. Prepare the data for the test
+anova_data <- train %>%
+  mutate(
+    temp = as.numeric(bottle_t_deg_c),
+    depth_group = ifelse(as.numeric(bottle_depthm) <= 200, "Shallow", "Deep")
+  ) %>%
+  filter(!is.na(temp), !is.na(depth_group))
+
+# 2. Run the ANOVA (Comparing Temperature by Depth Group)
+temp_anova <- aov(temp ~ depth_group, data = anova_data)
+
+# 3. View the results
+summary(temp_anova)
+
+```
+
+
+
+
+
+
+```{r}
+# This lists only column names that contain "lat" or "lon"
+colnames(train)[grep("lat|lon", colnames(train), ignore.case = TRUE)]
+
+```
+
+
+
+
+```{r}
+
+library(leaflet)
+
+
+# 1. Clean the data and prepare for the map
+map_data <- train %>%
+  mutate(
+    lat = as.numeric(cast_lat_dec),
+    lon = as.numeric(cast_lon_dec),
+    temp = as.numeric(bottle_t_deg_c)
+  ) %>%
+  # Filter out missing coordinates and extreme temperature outliers
+  filter(!is.na(lat), !is.na(lon), !is.na(temp), temp < 40) %>%
+  group_by(cast_sta_id, lat, lon) %>%
+  summarise(avg_temp = mean(temp), .groups = "drop")
+
+# 2. Create a color palette (Blue for cold, Red for hot)
+pal <- colorNumeric(palette = "YlOrRd", domain = map_data$avg_temp)
+
+# 3. Build the Leaflet map
+leaflet(map_data) %>%
+  addTiles() %>%  # Adds the standard street map background
+  addCircleMarkers(
+    lng = ~lon, lat = ~lat,
+    radius = 5,
+    color = ~pal(avg_temp),
+    stroke = FALSE, fillOpacity = 0.8,
+    # This popup appears when you click a dot
+    popup = ~paste0("<b>Station ID:</b> ", cast_sta_id, 
+                   "<br><b>Avg Temp:</b> ", round(avg_temp, 2), "\u00B0C")
+  ) %>%
+  addLegend(pal = pal, values = ~avg_temp, title = "Temp (\u00B0C)")
+
+```
+
+
+```{r}
+# Time Seasonal
+# 1. Create the Season column and filter for depth layers
+seasonal_data <- train %>%
+  mutate(
+    # Convert types for calculation
+    temp = as.numeric(bottle_t_deg_c),
+    sal = as.numeric(bottle_salnty),
+    month = as.numeric(cast_month),
+    depth = as.numeric(bottle_depthm),
+    # Assign seasons based on month number
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "Winter",
+      month %in% c(3, 4, 5) ~ "Spring",
+      month %in% c(6, 7, 8) ~ "Summer",
+      month %in% c(9, 10, 11) ~ "Fall"
+    ),
+    depth_group = ifelse(depth <= 200, "Shallow (0-200m)", "Deep (>200m)")
+  ) %>%
+  filter(!is.na(season), !is.na(temp), !is.na(sal))
+
+# 2. Create the Visual Comparison
+ggplot(seasonal_data, aes(x = temp, y = sal, color = season)) +
+  geom_point(alpha = 0.1, size = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, size = 1.2) + 
+  facet_wrap(~ depth_group, scales = "free") +
+  labs(title = "Seasonal Impact on Temperature vs. Salinity",
+       subtitle = "Does the time of year change the 'rules' of the ocean?",
+       x = "Temperature (C)", y = "Salinity (psu)") +
+  theme_minimal()
+
+ggsave(paste0(website_folder, "img-11.jpeg"), width = 10, height = 5, dpi = 300)
+
+```
+
+
+
+```{r}
+library(jsonlite)
+write_json(map_data, "map_data.json", pretty = TRUE)
+
+
+```
+```{r}
+head(map_data)
+```
+```{r}
+library(jsonlite)
+library(sf)
+library(tidyverse)
+library(janitor)
+
+# 1. Load your JSON
+# Using the path from your error message
+path <- "C:/Users/afsan/OneDrive/Desktop/Thesis/map_data.json"
+raw_data <- fromJSON(path) %>% as.data.frame()
+
+# 2. Clean names to ensure consistency (janitor package)
+clean_data <- raw_data %>% clean_names()
+
+# 3. Identify coordinate columns automatically
+# This looks for columns containing 'lat' or 'lon' / 'lng'
+lon_col <- names(clean_data)[grepl("lon|lng", names(clean_data))][1]
+lat_col <- names(clean_data)[grepl("lat", names(clean_data))][1]
+
+# 4. Convert to spatial object using the auto-detected names
+map_sf <- st_as_sf(clean_data, 
+                   coords = c(lon_col, lat_col), 
+                   crs = 4326)
+
+# 5. Test the Map
+library(leaflet)
+leaflet(map_sf) %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 3, color = "blue", weight = 1)
+```
+
+
+
+
