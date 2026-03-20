@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Data Analysis Study of Temperature Based on CALCOFI Data.</title>
+    <!-- Modern font -->
+    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap)" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="[unpkg.com](https://unpkg.com/leaflet/dist/leaflet.css)" />
+    <script src="[d3js.org](https://d3js.org/d3.v7.min.js)"></script>
+    <script async src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js)"></script>
+</head>
+<body id="top">
+    
+    <!-- Hero header: Title -->
+    <header class="hero-header">
+        <h1>A Data Analysis Study of Temperature Based on CALCOFI Data</h1>
+        <div class="header-credits">
+            <p class="author">Afsana Mimi</p>
+            <p class="professor">Professor Howard Everson</p>
+            <p class="institution">Data Analysis and Visualization, The Graduate Center</p>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="button-nav">
+        <ul>
+            <li><a href="#about">About Project</a></li>
+            <li><a href="#geography-season">1. Geography & Seasons</a></li>
+            <li><a href="#depth-divide">2. The Depth Divide</a></li>
+            <li><a href="#predictive-model">3. Predictive Model</a></li>
+            <li><a href="#technical-appendix">Packages & Methodology</a></li>
+            <li><a href="#downloads">Project Files</a></li>
+        </ul>
+    </nav>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="about-container">
+            <h2>Decoding the California Current</h2>
+            <p>Can we accurately predict ocean temperatures based entirely on chemical and physical markers? This dashboard explores the CalCOFI dataset to tell the story of the California Current System.</p>
+            <p>Moving beyond standard single-variable analysis, we bridge the gap between raw, chaotic oceanographic data and actionable structural insights—proving that the ocean operates not as one random body of water, but as distinctly organized chemical layers.</p>
+        </div>
+    </section>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard-wrapper">
+        
+        <!-- KPIs -->
+        <section class="kpi-row">
+            <div class="kpi-card">
+                <h3>Model Accuracy (R&sup2;)</h3>
+                <div class="kpi-value">85.6%</div>
+                <p>Variation in temperature explained by our final model.</p>
+            </div>
+            <div class="kpi-card">
+                <h3>Margin of Error</h3>
+                <div class="kpi-value">&plusmn; 1.16&deg;C</div>
+                <p>Average prediction error.</p>
+            </div>
+            <div class="kpi-card">
+                <h3>Primary Driver</h3>
+                <div class="kpi-value">Depth</div>
+                <p>The dominant structural filter of the ocean.</p>
+            </div>
+        </section>
+
+        <!-- Chapter 1: Geography & Seasons -->
+        <section id="geography-season" class="dashboard-panel">
+            <div class="panel-header">
+                <h2>1. Surface Level: Geographic Spread & Seasons</h2>
+                <p>Geography and time of year dictate the initial thermal behavior and "noise" of the water mass at the surface.</p>
+            </div>
+            
+            <div class="grid-2-col">
+                <div class="card-text">
+                    <h3>Visualization 1: A Clear Thermal Gradient</h3>
+                    <p>Water in the Southern regions begins with significantly higher surface temperatures (20-25&deg;C). This elevated heat creates immense "atmospheric noise" and variability compared to the highly stable, cooler Northern regions (10-15&deg;C).</p>
+                    <p><em>Interact with the map to explore individual station temperature averages.</em></p>
+                </div>
+                <!-- MAP CONTAINER -->
+                <div class="card-visual map-container">
+                    <div id="leaflet-map"></div>
+                </div>
+            </div>
+
+            <div class="grid-2-col mt-40 align-center">
+                <!-- IMAGE EMBEDDING -->
+                <div class="card-visual">
+                    <figure>
+                        <!-- Ensure img-11.jpeg is in the same folder as index.html -->
+                        <img src="img-11.jpeg" alt="Seasonal Impact on Temperature vs. Salinity">
+                        <figcaption>Faceted plot showing the relationship between Temperature and Salinity across seasons.</figcaption>
+                    </figure>
+                </div>
+                <div class="card-text">
+                    <h3>Visualization 2: Does the time of year change the rules?</h3>
+                    <p>The time of year only changes the rules <strong>at the surface</strong>. Notice the shallow water data clusters (right); they clearly shift across the seasons (Fall, Spring, Summer, Winter).</p>
+                    <p>However, look at the deep ocean (>200m) on the left. The trend lines perfectly overlap. This mathematically proves the deep ocean is "timeless" and thermally isolated from the sun.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter 2: The Depth Divide -->
+        <section id="depth-divide" class="dashboard-panel panel-alt">
+            <div class="panel-header">
+                <h2>2. The Depth Divide: Two Ocean Worlds</h2>
+                <p>The ocean is not one continuous gradient; it is physically fractured into distinct zones at the 200-meter mark.</p>
+            </div>
+            
+            <div class="grid-2-col align-center">
+                <div class="card-text">
+                    <h3>Visualization 3: Average Temp by Depth</h3>
+                    <p>The shallow ocean layer (0-200m) is an <strong>open system</strong>, almost twice as warm as the deeper layer.</p>
+                    <p>Our ANOVA analysis (F-value: 715,208, p &lt; 2e-16) proves a massive structural shift at 200m. Once past this line, the ocean becomes a <strong>closed system</strong> governed by density.</p>
+                </div>
+                <div class="card-visual">
+                    <figure>
+                        <img src="img-9.jpeg" alt="Average Temperature by Depth Layer">
+                    </figure>
+                </div>
+            </div>
+
+            <div class="grid-2-col mt-40">
+                <div class="card-content">
+                    <h3>Visualization 4: The Flaw in Simple Linear Models</h3>
+                    <figure>
+                        <img src="img-7.jpeg" alt="Temp vs Depth Underfitting">
+                        <figcaption>A single variable linear regression (red line) fails to capture the true ocean curve.</figcaption>
+                    </figure>
+                    <p>If we try to predict temperature based <em>only</em> on depth, the model underfits. The ocean's temperature drops violently and then levels out, proving we need a multi-variable approach.</p>
+                </div>
+                <div class="card-content">
+                    <h3>Visualization 5: Salinity Stabilization</h3>
+                    <figure>
+                        <img src="img-8.jpeg" alt="Temperature vs Salinity by Depth">
+                        <figcaption>The chaotic surface vs. the strict laws of the deep.</figcaption>
+                    </figure>
+                    <p>In shallow water (right), temperature and salinity form a scattered cloud—decoupled by atmospheric noise. Below 200m (left), depth acts as a quality-control filter, forcing water to be consistently cold and salty.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter 3: Predictive Modeling -->
+        <section id="predictive-model" class="dashboard-panel">
+            <div class="panel-header">
+                <h2>3. Chemical Correlation & Predictive Modeling</h2>
+                <p>Combining all variables to hunt for the optimal predictive equation.</p>
+            </div>
+
+            <div class="grid-2-col align-center">
+                <div class="card-visual">
+                    <figure>
+                        <img src="img-5.jpeg" alt="Correlation Heatmap">
+                        <figcaption>Strong interdependencies among oceanic predictors.</figcaption>
+                    </figure>
+                </div>
+                <div class="card-text">
+                    <h3>Visualization 6: The Multicollinearity Trap</h3>
+                    <p>Nutrients (Phosphate, Nitrate, Silicate) exhibit near-perfect correlations with each other (0.97 to 0.99) and an inverse relationship with Oxygen (-0.98).</p>
+                    <p>To combat this redundancy, we tested Ridge Regression against Standard Linear Regression. Surprisingly, the Standard model won on unseen test data (MAE: 0.899 vs 0.962)—the physical laws governing these chemicals are simply that stable.</p>
+                </div>
+            </div>
+
+            <div class="grid-2-col mt-40">
+                <div class="card-text">
+                    <h3>Visualization 7: Actual vs. Predicted Results</h3>
+                    <div class="equation-box">
+                        <strong>The Final Prescriptive Equation:</strong><br>
+                        <code>Temp = -53.61 - (0.014*depth) + (2.26*salinity) - (5.49*phosphate) - (0.13*nitrate) + (0.13*silicate) - (0.04*o2sat)</code>
+                    </div>
+                    <p>This scatterplot visualizes our 85.6% accuracy. For cooler temperatures (5&deg;C to 15&deg;C), the model is exceptionally precise. However, above 15&deg;C, it under-predicts the heat, struggling to capture the chaotic sun-driven spikes of the shallow surface water.</p>
+                </div>
+                <div class="card-visual">
+                    <figure>
+                        <img src="img-6.jpeg" alt="Actual vs Predicted Temperature">
+                    </figure>
+                </div>
+            </div>
+        </section>
+
+        <!-- METHODOLOGY & PACKAGES APPENDIX -->
+        <section id="technical-appendix" class="dashboard-panel technical-section">
+            <div class="panel-header">
+                <h2>Packages & Technical Methodology</h2>
+                <p>Database queries, encoding fixes, and the software ecosystem utilized.</p>
+            </div>
+            
+            <details open>
+                <summary>Software Ecosystem: Packages & Modules</summary>
+                <div class="details-content">
+                    <h4>MSQL Modules Utilized:</h4>
+                    <table class="dashboard-table">
+                        <thead><tr><th>Module name</th><th>Why do we use it</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Task</strong></td><td>To import files into the data as tables faster.</td></tr>
+                            <tr><td><strong>Queries</strong></td><td>Join Queries to join the tables.</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4 style="margin-top:20px;">R Packages Utilized:</h4>
+                    <table class="dashboard-table">
+                        <thead><tr><th>Package</th><th>Why do we use it</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>tidyverse</strong></td><td>Reading CSV, cleaning, plotting, tables</td></tr>
+                            <tr><td><strong>janitor</strong></td><td>Standardize messy column names</td></tr>
+                            <tr><td><strong>stringi</strong></td><td>Safely convert strange characters to UTF-8</td></tr>
+                            <tr><td><strong>rsample</strong></td><td>Train/Test split, including grouped split by cruise</td></tr>
+                            <tr><td><strong>yardstick</strong></td><td>Metrics (R2, RMSE, MAE) to compare models fairly</td></tr>
+                            <tr><td><strong>broom</strong></td><td>Tidy model output for reporting</td></tr>
+                            <tr><td><strong>ppcor</strong></td><td>Partial correlation (controls for depth confounding)</td></tr>
+                            <tr><td><strong>car</strong></td><td>VIF for multicollinearity</td></tr>
+                            <tr><td><strong>glmnet</strong></td><td>Ridge/Lasso regression (stable with overlapping predictors)</td></tr>
+                            <tr><td><strong>Matrix</strong></td><td>Sparse model matrices</td></tr>
+                            <tr><td><strong>leaflet</strong></td><td>Interactive Geographic data mapping</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+
+        <!-- DOWNLOADABLE FILES SECTION -->
+        <section id="downloads" class="dashboard-panel panel-alt">
+            <div class="panel-header" style="border-bottom: 2px solid #00b4d8;"> 
+                <h2 style="color: #0B2447;">Project Files & Appendix</h2>
+                <p>Reproduce these findings by downloading the datasets, scripts, and documentation below.</p>
+            </div>
+            
+            <div class="download-grid">
+                <!-- Data Files. Notice href="files/..." pointing to the folder you created -->
+                <div class="download-card">
+                    <div class="icon">📊</div>
+                    <h4>Raw Bottle Data</h4>
+                    <p>CALCOFI main bottle sample metrics.</p>
+                    <a href="files/194903-202105_Bottle.csv" class="download-btn" download>Download CSV</a>
+                </div>
+
+                <div class="download-card">
+                    <div class="icon">📊</div>
+                    <h4>Raw Cast Data</h4>
+                    <p>Geographic and temporal cast logs.</p>
+                    <a href="files/194903-202105_Cast.csv" class="download-btn" download>Download CSV</a>
+                </div>
+
+                <div class="download-card">
+                    <div class="icon">📍</div>
+                    <h4>Merged DataSets for Analysis</h4>
+                    <p>Main datasets(Bottle & Cast) for Analysis</p>
+                    <a href="files/MERGED_CalCOFI_DATA_CAST_BOTTLE.csv" class="download-btn" download>Download CSV</a>
+                </div>
+
+                <div class="download-card">
+                    <div class="icon">📖</div>
+                    <h4>Data CodeBook</h4>
+                    <p>CALCOFI variable definitions.</p>
+                    <a href="files/CalCofi DataSets CodeBook.xlsx" class="download-btn" download>Download Excel</a>
+                </div>
+
+                <div class="download-card">
+                    <div class="icon">📖</div>
+                    <h4>DataSet Readme instructions</h4>
+                    <p> CALCOFI DataSet Readme instructions</p>
+                    <a href="files/Capstone Project CodeBook and DataSet Readme instructions.pdf" class="download-btn" download>Download pdf</a>
+                </div>
+
+                  <div class="download-card">
+                    <div class="icon">📖</div>
+                    <h4>Technical Documentation</h4>
+                    <p> CALCOFI Technical Documentation Step by Step</p>
+                    <a href="files/CALCOFI-DataAnalysis Report.pdf" class="download-btn" download>Download pdf</a>
+                </div>
+
+
+                <!-- Scripts -->
+                <div class="download-card">
+                    <div class="icon">💻</div>
+                    <h4>R Analysis Script</h4>
+                    <p>Full ML and statistical breakdown.</p>
+                    <a href="files/analysis_script.Rmd" class="download-btn" download>Download R Script</a>
+                </div>
+
+                <div class="download-card">
+                    <div class="icon">⚙️</div>
+                    <h4>SQL Database Script</h4>
+                    <p>Merges and initial fast-filtering.</p>
+                    <a href="files/SQL_setup_script.sql" class="download-btn" download>Download SQL</a>
+                </div>
+
+                <!-- Map Data -->
+                <div class="download-card">
+                    <div class="icon">🗺️</div>
+                    <h4>Leaflet Map Data</h4>
+                    <p>Aggregated UI geographic JSON.</p>
+                    <!-- map_data.json is in the main outer folder, so no "files/" needed -->
+                    <a href="map_data.json" class="download-btn" download>Download JSON</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2023 CalCOFI Data Analysis. Engineered for the California Current System.</p>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button id="scrollTopBtn" title="Go to top">&#8679;</button>
+
+    <script src="[unpkg.com](https://unpkg.com/leaflet/dist/leaflet.js)"></script>
+    <script src="script.js"></script>
+    <script src="map.js"></script>
+</body>
+</html>
