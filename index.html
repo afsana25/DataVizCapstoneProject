@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A Data Analysis Study of Temperature Based on CALCOFI Data.</title>
-    <!-- Modern font -->
-    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap)" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="[unpkg.com](https://unpkg.com/leaflet/dist/leaflet.css)" />
-    <script src="[d3js.org](https://d3js.org/d3.v7.min.js)"></script>
-    <script async src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js)"></script>
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 </head>
 <body id="top">
     
@@ -23,17 +28,17 @@
         </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="button-nav">
-        <ul>
-            <li><a href="#about">About Project</a></li>
-            <li><a href="#geography-season">1. Geography & Seasons</a></li>
-            <li><a href="#depth-divide">2. The Depth Divide</a></li>
-            <li><a href="#predictive-model">3. Predictive Model</a></li>
-            <li><a href="#technical-appendix">Packages & Methodology</a></li>
-            <li><a href="#downloads">Project Files</a></li>
-        </ul>
-    </nav>
+<nav class="button-nav">
+    <ul>
+        <li><a href="#about">About Project</a></li>
+        <li><a href="#geography-season">1. Geography & Seasons</a></li>
+        <li><a href="#depth-divide">2. The Depth Divide</a></li>
+        <li><a href="#predictive-model">3. Predictive Model</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+        <li><a href="#technical-appendix">Packages & Methodology</a></li>
+        <li><a href="#downloads">Project Files</a></li>
+    </ul>
+</nav>
 
     <!-- About Section -->
     <section id="about" class="about-section">
@@ -66,24 +71,24 @@
             </div>
         </section>
 
-        <!-- Chapter 1: Geography & Seasons -->
-        <section id="geography-season" class="dashboard-panel">
-            <div class="panel-header">
-                <h2>1. Surface Level: Geographic Spread & Seasons</h2>
-                <p>Geography and time of year dictate the initial thermal behavior and "noise" of the water mass at the surface.</p>
-            </div>
-            
-            <div class="grid-2-col">
-                <div class="card-text">
-                    <h3>Visualization 1: A Clear Thermal Gradient</h3>
-                    <p>Water in the Southern regions begins with significantly higher surface temperatures (20-25&deg;C). This elevated heat creates immense "atmospheric noise" and variability compared to the highly stable, cooler Northern regions (10-15&deg;C).</p>
-                    <p><em>Interact with the map to explore individual station temperature averages.</em></p>
-                </div>
-                <!-- MAP CONTAINER -->
-                <div class="card-visual map-container">
-                    <div id="leaflet-map"></div>
-                </div>
-            </div>
+
+    <section id="geography-season" class="dashboard-panel">
+    <div class="panel-header">
+        <h2>1. Surface Level: Geographic Spread & Seasons</h2>
+        <p>Geography and time of year dictate the initial thermal behavior and "noise" of the water mass at the surface.</p>
+    </div>
+    
+    <div class="grid-2-col">
+        <div class="card-text">
+            <h3>Visualization 1: A Clear Thermal Gradient</h3>
+            <p>Water in the Southern regions begins with significantly higher surface temperatures (20-25&deg;C). This elevated heat creates immense "atmospheric noise" compared to the highly stable Northern regions (10-15&deg;C).</p>
+            <p><em>Interact with the map to explore individual station temperature averages.</em></p>
+        </div>
+        <div class="card-visual map-container" style="position: relative; height: 400px;">
+            <div id="leaflet-map" style="height: 100%; width: 100%;"></div>
+        </div>
+    </div>
+    </section>
 
             <div class="grid-2-col mt-40 align-center">
                 <!-- IMAGE EMBEDDING -->
@@ -178,6 +183,17 @@
                     </figure>
                 </div>
             </div>
+        </section>
+
+        <!-- Conclusion -->
+       <section id="conclusion" class="dashboard-panel panel-alt">
+        <div class="panel-header">
+        <h2>Conclusion</h2>
+        </div>
+        <div class="about-container">
+        <p>Ultimately, this research confirms that data-driven insights are our best defense against an uncertain climate future. 
+        From observing the Pacific Current to analyzing deep-sea shifts, this study validates the power of integrated modeling.</p>
+        </div>
         </section>
 
         <!-- METHODOLOGY & PACKAGES APPENDIX -->
