@@ -589,7 +589,7 @@ leaflet(map_data) %>%
     radius = 5,
     color = ~pal(avg_temp),
     stroke = FALSE, fillOpacity = 0.8,
-    # This popup appears when you click a dot
+    # This popup appears when we click a dot
     popup = ~paste0("<b>Station ID:</b> ", cast_sta_id, 
                    "<br><b>Avg Temp:</b> ", round(avg_temp, 2), "\u00B0C")
   ) %>%
@@ -650,8 +650,8 @@ library(sf)
 library(tidyverse)
 library(janitor)
 
-# 1. Load your JSON
-# Using the path from your error message
+# 1. Load the JSON file
+# Using the path from the error message
 path <- "C:/Users/afsan/OneDrive/Desktop/Thesis/map_data.json"
 raw_data <- fromJSON(path) %>% as.data.frame()
 
