@@ -29,7 +29,7 @@ p { color: #475569; margin-bottom: 1.2rem; }
     letter-spacing: -0.5px;
 }
 
-/* Header Credits (Your name right below the title) */
+/* Header Credit */
 .header-credits {
     margin-top: 15px;
     padding-top: 15px;
@@ -42,7 +42,7 @@ p { color: #475569; margin-bottom: 1.2rem; }
 .header-credits .author {
     font-size: 1.4em;
     font-weight: 500;
-    color: #00b4d8; /* Vibrant Cyan accent for your name */
+    color: #00b4d8; /* Vibrant Cyan accent */
     margin: 0 0 3px 0;
 }
 
