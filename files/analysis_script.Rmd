@@ -298,7 +298,7 @@ summary(m_lm)
 ```
 
 ```{r}
-# Generate a correlation matrix for your predictors
+# Generate a correlation matrix for the predictors
 cor_matrix <- cor(train_selected[, selected_vars])
 
 # Save it as a CSV file
@@ -307,7 +307,7 @@ write.csv(cor_matrix, "correlation_matrix.csv")
 round(cor_matrix, 2) # Rounding to 2 decimals 
 ```
 ```{r}
-# Define your website folder path
+# Define the website folder path
 website_folder <- "C:/Users/afsan/OneDrive/Desktop/Thesis/calcofi_dashboards/"
 
 ```
